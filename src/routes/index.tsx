@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import '../App.css'
 import { cn } from '@/utils/styles'
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DataRepo from '@/api/datasource';
 import MonthsResumen from '@/components/MonthResumen';
 import type { EventoType } from '@/types/Evento';
@@ -13,6 +13,7 @@ import type { DineroCreate } from '@/types/Dinero';
 import type LLMBaseManager from '@/managers/LLMBaseManager';
 import { LLMWebLLMManager } from '@/managers/LLMWebLLMManager';
 import FloatingChat from '@/components/FloatingChat';
+import type { InferenceResult } from '@/managers/LLMBaseManager';
 
 export const Route = createFileRoute('/')({
   component: App,
@@ -30,12 +31,27 @@ type AgrupacionMensual = {
   total: number;
 };
 
+type Message = {
+  role: 'user' | 'bot'
+  content: string
+}
+
 function App() {
   dayjs.locale("es");
 
   const [llmManager, setLlmManager] = useState<LLMBaseManager | null>(null);
 
   const [isChatOn, setIsChatOn] = useState(false);
+
+  const [userPrompt, setUserPrompt] = useState<string>('');
+  const [response, setResponse] = useState<string>('');
+  const [messages, setMessages] = useState<Message[]>([]);
+
+
+
+  // const [streamingResponse, setStreamingResponse] = useState<string>('');
+
+
 
   const [dineroInicial, setDineroInicial] = useState(0);
   // const [eventosAgrupados, setEventosAgrupados] = useState<[string, EventoType[]][]>([]);
@@ -53,7 +69,7 @@ function App() {
       manager = new LLMWebLLMManager({
         modelName: CONFIG.webLLM.modelName,
         temperature: 0.7,
-        systemPrompt: 'Hello'
+        systemPrompt: 'Eres un asistente IA para continuar una conversación'
       });
       setLlmManager(manager);
       await manager.loadModel(); // Cargar modelo automáticamente al iniciar
@@ -75,6 +91,37 @@ function App() {
       }
     };
   }, [llmManager]);
+
+  const inferMutation = useMutation({
+    mutationFn: async (prompt: string) => {
+      if (!llmManager) throw new Error("LLM Manager not initialized.");
+      //setResponse(prompt + "<br>"); // Limpiar respuesta anterior
+      setMessages(prev => [...prev, { role: 'user', content: prompt }]);
+      // setStreamingResponse(''); // Limpiar streaming anterior
+      return llmManager.infer(prompt);
+    },
+    onSuccess: function (data: InferenceResult) {
+      //setResponse((prev) => prev + data.text);
+      setMessages(prev => [...prev, { role: 'bot', content: data.text }]);
+      //queryClient.invalidateQueries(['llmResponse']); // Invalidar para actualizar si fuera necesario
+
+      queryClient.invalidateQueries({
+        queryKey: ['llmResponse']
+      })
+      setUserPrompt('')
+
+    },
+    onError: (error) => {
+      console.error('Inference error:', error);
+      setResponse('Error: ' + (error as any).message || 'Unknown error');
+    }
+  });
+
+  const onSendPrompt = (prompt: string) => {
+    inferMutation.mutate(prompt);
+  };
+
+  const queryClient = useQueryClient();
 
 
   const { isPending, error, data: events } = useQuery({
@@ -161,7 +208,6 @@ function App() {
 
 
 
-
   return (
     <div className="App">
       <div className='flex flex-col md:flex-row justify-between items-start md:items-end gap-4'>
@@ -190,7 +236,7 @@ function App() {
 
         </div>
       </div>
-      <FloatingChat isChatOn={isChatOn} />
+      <FloatingChat messages={messages} isChatOn={isChatOn} userPrompt={userPrompt} setUserPrompt={setUserPrompt} response={response} onSendPrompt={onSendPrompt} isPending={inferMutation.isPending} />
     </div>
   )
 }

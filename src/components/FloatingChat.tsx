@@ -1,14 +1,26 @@
 import { useState } from "react";
 import { MessageCircle, X, Settings2 } from "lucide-react";
 
-type FloatingChatProps = {
 
-    isChatOn: boolean
+type FloatingChatProps = {
+    isChatOn: boolean;
+    userPrompt: string;
+    setUserPrompt: (value: string) => void;
+    response: string;
+    messages: { role: 'user' | 'bot'; content: string }[];
+    isPending: boolean;
+    onSendPrompt: (prompt: string) => void;
+
 }
 
 
-
-export default function FloatingChat({ isChatOn }: FloatingChatProps) {
+export default function FloatingChat({ isChatOn,
+    userPrompt,
+    setUserPrompt,
+    response,
+    messages,
+    isPending,
+    onSendPrompt, }: FloatingChatProps) {
     const [showSettings, setShowSettings] = useState(false);
     const [open, setOpen] = useState(false);
     const [tempe, setTempe] = useState(0)
@@ -20,6 +32,11 @@ export default function FloatingChat({ isChatOn }: FloatingChatProps) {
     const handleTopp = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTopp(+e.target.value)
     }
+
+    const handleSend = () => {
+        if (!userPrompt.trim()) return;
+        onSendPrompt(userPrompt);
+    };
 
     return (
         <>
@@ -36,7 +53,7 @@ export default function FloatingChat({ isChatOn }: FloatingChatProps) {
                 <div className="fixed bottom-20 right-6 w-80 h-96 bg-white dark:bg-gray-800 shadow-2xl rounded-2xl flex flex-col z-40">
 
                     <div className="relative p-3 bg-violet-600 dark:bg-pink-500 text-white font-bold rounded-t-2xl flex justify-center items-center">
-                        <span>Mini Chat</span>
+                        <span>Asistente IA</span>
                         <Settings2 className="absolute right-3 cursor-pointer" onClick={() => setShowSettings(!showSettings)} />
                     </div>
 
@@ -56,18 +73,52 @@ export default function FloatingChat({ isChatOn }: FloatingChatProps) {
 
                     </div>
 
-                    <div className="flex-1 p-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200">
-                        <div className="mb-2">{!isChatOn ? `Modelo AI cargando` : `👋 Hola, ¿en qué puedo ayudarte?`}</div>
+                    <div className="flex-1 p-3 overflow-y-auto scr text-sm text-gray-700 dark:text-gray-200">
+                        {!isChatOn && (
+                            <div className="text-center text-gray-500 italic">Modelo AI cargando...</div>
+                        )}
+
+                        {messages.length === 0 && isChatOn && (
+                            <div className="text-center text-gray-400">¡Escribe un mensaje para comenzar!</div>
+                        )}
+
+                        {messages.map((msg, index) => (
+                            <div
+                                key={index}
+                                className={`my-2
+                                            max-w-3xs
+                                            p-3 rounded-lg
+                                            ${msg.role === 'user'
+                                        ? 'bg-violet-200 text-gray-800 self-end ml-auto'
+                                        : 'bg-gray-200 text-gray-800 self-start mr-auto dark:bg-gray-700 dark:text-white'
+                                    }
+                                `}
+                            >
+                                {msg.content}
+                            </div>
+                        ))}
+
+
+                        {/* <div className="mb-2">{!isChatOn ? `Modelo AI cargando` : ``} {response || <span className="text-gray-400">Aún no hay respuesta...</span>}</div> */}
                     </div>
 
 
-                    <div className="p-2 border-t border-gray-200 dark:border-gray-700">
-                        <input
-                            type="text"
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex" flex-row>
+                        <textarea
+                            value={userPrompt}
+                            onChange={(e) => setUserPrompt(e.target.value)}
                             placeholder={!isChatOn ? `Modelo AI cargando` : `Escribe un mensaje...`}
                             className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
                             disabled={!isChatOn}
+                            rows={2}
                         />
+                        <button
+                            onClick={handleSend}
+                            disabled={isPending || !userPrompt.trim()}
+                            className="bg-violet-600 text-white px-3 py-2 mx-1 rounded hover:bg-blue-700 disabled:opacity-50 h-fit"
+                        >
+                            {isPending ? '...' : 'Enviar'}
+                        </button>
                     </div>
                 </div>
             )}
