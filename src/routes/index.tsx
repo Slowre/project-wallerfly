@@ -10,10 +10,19 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es'
 import SetDineroInicial from '@/components/SetDineroInicial';
 import type { DineroCreate } from '@/types/Dinero';
+import type LLMBaseManager from '@/managers/LLMBaseManager';
+import { LLMWebLLMManager } from '@/managers/LLMWebLLMManager';
+import FloatingChat from '@/components/FloatingChat';
 
 export const Route = createFileRoute('/')({
   component: App,
 })
+
+const CONFIG = {
+  webLLM: {
+    modelName: 'Qwen2-0.5B-Instruct-q4f16_1-MLC', // Modelo de ejemplo para web-llm gemma-2-2b-it-q4f16_1-MLC Qwen2-0.5B-Instruct-q4f16_1-MLC
+  }
+};
 
 type AgrupacionMensual = {
   mes: string;
@@ -23,12 +32,45 @@ type AgrupacionMensual = {
 
 function App() {
   dayjs.locale("es");
-  
+
+  const [llmManager, setLlmManager] = useState<LLMBaseManager | null>(null);
+
+  const [isChatOn, setIsChatOn] = useState(false);
+
   const [dineroInicial, setDineroInicial] = useState(0);
   // const [eventosAgrupados, setEventosAgrupados] = useState<[string, EventoType[]][]>([]);
 
 
   const [eventosAgrupados, setEventosAgrupados] = useState<AgrupacionMensual[]>([]);
+
+
+
+
+  useEffect(() => {
+    const initializeManager = async () => {
+      let manager: LLMBaseManager;
+
+      manager = new LLMWebLLMManager({
+        modelName: CONFIG.webLLM.modelName,
+        temperature: 0.7,
+        systemPrompt: 'Hello'
+      });
+      setLlmManager(manager);
+      await manager.loadModel(); // Cargar modelo automáticamente al iniciar
+
+      if (await manager.download) {
+        console.log('Ya esta cargado el modelo')
+        setIsChatOn(true)
+      }
+    };
+
+    initializeManager();
+    return () => {
+      if (llmManager) {
+        llmManager.unloadModel();
+      }
+    };
+  }, []);
 
 
   const { isPending, error, data: events } = useQuery({
@@ -111,6 +153,11 @@ function App() {
     mutation.mutate(nuevoDinero)
   }
 
+
+
+
+
+
   return (
     <div className="App">
       <div className='flex flex-col md:flex-row justify-between items-start md:items-end gap-4'>
@@ -139,6 +186,7 @@ function App() {
 
         </div>
       </div>
+      <FloatingChat isChatOn={isChatOn}/>
     </div>
   )
 }

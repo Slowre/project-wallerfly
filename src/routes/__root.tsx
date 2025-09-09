@@ -1,6 +1,5 @@
 import Header from '@/components/Header'
 import { Outlet, createRootRoute } from '@tanstack/react-router'
-import TanstackQueryLayout from '../integrations/tanstack-query/layout'
 
 export const Route = createRootRoute({
   component: () => (
@@ -8,7 +7,6 @@ export const Route = createRootRoute({
       <Header />
       <div className="flex-1 p-7 md:p-16 justify-center">
         <Outlet />
-        <TanstackQueryLayout />
       </div>
     </div>
   ),

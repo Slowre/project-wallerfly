@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.79",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/react-form": "^1.14.1",
     "@tanstack/react-query": "^5.83.0",
@@ -19,6 +20,7 @@
     "@tanstack/router-plugin": "^1.121.2",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
+    "lucide-react": "^0.542.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-tooltip": "^5.29.1",
