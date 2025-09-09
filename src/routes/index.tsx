@@ -65,12 +65,16 @@ function App() {
     };
 
     initializeManager();
+
+  }, []);
+  useEffect(() => {
     return () => {
       if (llmManager) {
+        console.log("🛑 Descargando modelo...");
         llmManager.unloadModel();
       }
     };
-  }, []);
+  }, [llmManager]);
 
 
   const { isPending, error, data: events } = useQuery({
@@ -186,7 +190,7 @@ function App() {
 
         </div>
       </div>
-      <FloatingChat isChatOn={isChatOn}/>
+      <FloatingChat isChatOn={isChatOn} />
     </div>
   )
 }
