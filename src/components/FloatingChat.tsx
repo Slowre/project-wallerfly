@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageCircle, X, Settings2 } from "lucide-react";
+import { MessageCircle, X, Settings2, Eraser } from "lucide-react";
 
 
 type FloatingChatProps = {
@@ -9,7 +9,7 @@ type FloatingChatProps = {
     messages: { role: 'user' | 'bot'; content: string }[];
     isPending: boolean;
     onSendPrompt: (prompt: string, temperatureUser: number, top_pUser: number) => void;
-
+    erraseMessages:()=>void;
 }
 
 
@@ -18,7 +18,7 @@ export default function FloatingChat({ isChatOn,
     setUserPrompt,
     messages,
     isPending,
-    onSendPrompt, }: FloatingChatProps) {
+    onSendPrompt,erraseMessages }: FloatingChatProps) {
     const [showSettings, setShowSettings] = useState(false);
     const [open, setOpen] = useState(false);
     const [tempe, setTempe] = useState(0)
@@ -52,7 +52,9 @@ export default function FloatingChat({ isChatOn,
 
                     <div className="relative p-3 bg-violet-600 dark:bg-pink-500 text-white font-bold rounded-t-2xl flex justify-center items-center">
                         <span>Asistente IA</span>
+                        <Eraser className="absolute right-10 cursor-pointer" onClick={() => erraseMessages()}/>
                         <Settings2 className="absolute right-3 cursor-pointer" onClick={() => setShowSettings(!showSettings)} />
+                    
                     </div>
 
                     <div className={` bg-gray-100 border-b-1 border-gray-200 overflow-hidden transition-all duration-500 ${showSettings ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>

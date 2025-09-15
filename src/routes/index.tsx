@@ -210,6 +210,10 @@ function App() {
     mutation.mutate(nuevoDinero)
   }
 
+  const erraseMessages = ()=>{
+    setMessages([])
+  }
+
 
 
 
@@ -257,7 +261,7 @@ function App() {
 
         </div>
       </div>
-      <FloatingChat messages={messages} isChatOn={isChatOn} userPrompt={userPrompt} setUserPrompt={setUserPrompt} onSendPrompt={onSendPrompt} isPending={inferMutation.isPending} />
+      <FloatingChat messages={messages} isChatOn={isChatOn} userPrompt={userPrompt} setUserPrompt={setUserPrompt} onSendPrompt={onSendPrompt} isPending={inferMutation.isPending} erraseMessages={erraseMessages}/>
     </div>
   )
 }
