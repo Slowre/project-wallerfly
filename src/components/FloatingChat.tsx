@@ -6,10 +6,9 @@ type FloatingChatProps = {
     isChatOn: boolean;
     userPrompt: string;
     setUserPrompt: (value: string) => void;
-    response: string;
     messages: { role: 'user' | 'bot'; content: string }[];
     isPending: boolean;
-    onSendPrompt: (prompt: string) => void;
+    onSendPrompt: (prompt: string, temperatureUser: number, top_pUser: number) => void;
 
 }
 
@@ -17,14 +16,13 @@ type FloatingChatProps = {
 export default function FloatingChat({ isChatOn,
     userPrompt,
     setUserPrompt,
-    response,
     messages,
     isPending,
     onSendPrompt, }: FloatingChatProps) {
     const [showSettings, setShowSettings] = useState(false);
     const [open, setOpen] = useState(false);
     const [tempe, setTempe] = useState(0)
-    const [topp, setTopp] = useState(0)
+    const [topp, setTopp] = useState(0.1)
 
     const handleTempe = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTempe(+e.target.value)
@@ -35,7 +33,7 @@ export default function FloatingChat({ isChatOn,
 
     const handleSend = () => {
         if (!userPrompt.trim()) return;
-        onSendPrompt(userPrompt);
+        onSendPrompt(userPrompt, tempe, topp);
     };
 
     return (
@@ -66,7 +64,7 @@ export default function FloatingChat({ isChatOn,
                             </div>
                             <div className='flex items-center'>
                                 <label className={`px-2 font-semibold text-blue-700`}>Top-p</label>
-                                <input type="range" name="topp" id="topp" min="0" max="1" step="0.1" onChange={handleTopp} value={topp} />
+                                <input type="range" name="topp" id="topp" min="0.1" max="1" step="0.1" onChange={handleTopp} value={topp} />
                                 <label className={`px-2 font-semibold  text-gray-800 w-[4ch]`}>{topp}</label>
                             </div>
                         </div>
@@ -89,8 +87,8 @@ export default function FloatingChat({ isChatOn,
                                             max-w-3xs
                                             p-3 rounded-lg
                                             ${msg.role === 'user'
-                                        ? 'bg-violet-200 text-gray-800 self-end ml-auto'
-                                        : 'bg-gray-200 text-gray-800 self-start mr-auto dark:bg-gray-700 dark:text-white'
+                                        ? 'bg-violet-200 text-gray-800 self-end ml-auto text-end'
+                                        : 'bg-gray-200 text-gray-800 self-start mr-auto dark:bg-gray-700 dark:text-white text-start'
                                     }
                                 `}
                             >
@@ -103,7 +101,7 @@ export default function FloatingChat({ isChatOn,
                     </div>
 
 
-                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex" flex-row>
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex flex-row" >
                         <textarea
                             value={userPrompt}
                             onChange={(e) => setUserPrompt(e.target.value)}

@@ -20,8 +20,8 @@ export const Route = createFileRoute('/')({
 })
 
 const CONFIG = {
-  webLLM: {
-    modelName: 'Qwen2-0.5B-Instruct-q4f16_1-MLC', // Modelo de ejemplo para web-llm gemma-2-2b-it-q4f16_1-MLC Qwen2-0.5B-Instruct-q4f16_1-MLC
+  webLLM: { 
+    modelName: 'Qwen2-1.5B-Instruct-q4f16_1-MLC', // Modelo de ejemplo para web-llm gemma-2-2b-it-q4f16_1-MLC Qwen2-0.5B-Instruct-q4f16_1-MLC Qwen2-1.5B-Instruct-q4f16_0-MLC
   }
 };
 
@@ -36,28 +36,79 @@ type Message = {
   content: string
 }
 
+type LLMParamsInfer = {
+  prompt: string
+  temperatureUser: number
+  top_pUser: number
+}
+
 function App() {
+
+
+
+
   dayjs.locale("es");
 
   const [llmManager, setLlmManager] = useState<LLMBaseManager | null>(null);
-
   const [isChatOn, setIsChatOn] = useState(false);
 
   const [userPrompt, setUserPrompt] = useState<string>('');
-  const [response, setResponse] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
 
-
-
-  // const [streamingResponse, setStreamingResponse] = useState<string>('');
-
-
-
   const [dineroInicial, setDineroInicial] = useState(0);
-  // const [eventosAgrupados, setEventosAgrupados] = useState<[string, EventoType[]][]>([]);
-
-
   const [eventosAgrupados, setEventosAgrupados] = useState<AgrupacionMensual[]>([]);
+
+  const queryClient = useQueryClient();
+
+  const { isPending, error, data: events } = useQuery({
+    queryKey: ['events'],
+    queryFn: () => DataRepo.getEvents(),
+    refetchInterval: 2000, // Refetch every 2 seconds
+    refetchOnWindowFocus: true, // Refetch when the window is focused
+    retry: 3, // Retry failed requests up to 3 times
+    refetchIntervalInBackground: false, // Do not refetch in the background
+  })
+
+  const { data: dinero } = useQuery({
+    queryKey: ['money'],
+    queryFn: () => DataRepo.getMoney(),
+    refetchInterval: 2000, // Refetch every 2 seconds
+    refetchOnWindowFocus: true, // Refetch when the window is focused
+    retry: 3, // Retry failed requests up to 3 times
+    refetchIntervalInBackground: false, // Do not refetch in the background
+  })
+
+
+  const mutation = useMutation({
+    mutationFn: (values: DineroCreate) => DataRepo.saveMoney(values),
+  })
+
+
+  const inferMutation = useMutation({
+    mutationFn: async ({ prompt, temperatureUser, top_pUser }: LLMParamsInfer) => {
+      if (!llmManager) throw new Error("LLM Manager not initialized.");
+      //setResponse(prompt + "<br>"); // Limpiar respuesta anterior
+      setMessages(prev => [...prev, { role: 'user', content: prompt }]);
+      // setStreamingResponse(''); // Limpiar streaming anterior
+
+
+      return llmManager.infer(prompt, temperatureUser, top_pUser);
+    },
+    onSuccess: function (data: InferenceResult) {
+      //setResponse((prev) => prev + data.text);
+      setMessages(prev => [...prev, { role: 'bot', content: data.text }]);
+      //queryClient.invalidateQueries(['llmResponse']); // Invalidar para actualizar si fuera necesario
+
+      queryClient.invalidateQueries({
+        queryKey: ['llmResponse']
+      })
+      setUserPrompt('')
+
+    },
+    onError: (error) => {
+      console.error('Inference error:', error);
+    }
+  });
 
 
 
@@ -83,6 +134,7 @@ function App() {
     initializeManager();
 
   }, []);
+
   useEffect(() => {
     return () => {
       if (llmManager) {
@@ -92,59 +144,13 @@ function App() {
     };
   }, [llmManager]);
 
-  const inferMutation = useMutation({
-    mutationFn: async (prompt: string) => {
-      if (!llmManager) throw new Error("LLM Manager not initialized.");
-      //setResponse(prompt + "<br>"); // Limpiar respuesta anterior
-      setMessages(prev => [...prev, { role: 'user', content: prompt }]);
-      // setStreamingResponse(''); // Limpiar streaming anterior
-      return llmManager.infer(prompt);
-    },
-    onSuccess: function (data: InferenceResult) {
-      //setResponse((prev) => prev + data.text);
-      setMessages(prev => [...prev, { role: 'bot', content: data.text }]);
-      //queryClient.invalidateQueries(['llmResponse']); // Invalidar para actualizar si fuera necesario
 
-      queryClient.invalidateQueries({
-        queryKey: ['llmResponse']
-      })
-      setUserPrompt('')
-
-    },
-    onError: (error) => {
-      console.error('Inference error:', error);
-      setResponse('Error: ' + (error as any).message || 'Unknown error');
+  useEffect(() => {
+    if (dinero) {
+      setDineroInicial(dinero.money)
     }
-  });
+  }, [dinero])
 
-  const onSendPrompt = (prompt: string) => {
-    inferMutation.mutate(prompt);
-  };
-
-  const queryClient = useQueryClient();
-
-
-  const { isPending, error, data: events } = useQuery({
-    queryKey: ['events'],
-    queryFn: () => DataRepo.getEvents(),
-    refetchInterval: 2000, // Refetch every 2 seconds
-    refetchOnWindowFocus: true, // Refetch when the window is focused
-    retry: 3, // Retry failed requests up to 3 times
-    refetchIntervalInBackground: false, // Do not refetch in the background
-  })
-
-  const { data: dinero } = useQuery({
-    queryKey: ['money'],
-    queryFn: () => DataRepo.getMoney(),
-    refetchInterval: 2000, // Refetch every 2 seconds
-    refetchOnWindowFocus: true, // Refetch when the window is focused
-    retry: 3, // Retry failed requests up to 3 times
-    refetchIntervalInBackground: false, // Do not refetch in the background
-  })
-
-  const mutation = useMutation({
-    mutationFn: (values: DineroCreate) => DataRepo.saveMoney(values),
-  })
 
   useEffect(() => {
     if (events && dineroInicial) {
@@ -185,10 +191,28 @@ function App() {
   }, [events, dineroInicial])
 
   useEffect(() => {
-    if (dinero) {
-      setDineroInicial(dinero.money)
+    if (llmManager) {
+      llmManager.setContextData({
+        dineroInicial,
+        eventosAgrupados,
+      });
     }
-  }, [dinero])
+  }, [llmManager, dineroInicial, eventosAgrupados]);
+
+
+
+  const onSendPrompt = (prompt: string, temperatureUser: number, top_pUser: number) => {
+    inferMutation.mutate({ prompt, temperatureUser, top_pUser });
+  };
+
+  const aumentarDinero = (cantidad: number) => {
+    const nuevoDinero: DineroCreate = { money: cantidad }
+    mutation.mutate(nuevoDinero)
+  }
+
+
+
+
 
   if (isPending) {
     return <div className="p-4">Loading...</div>
@@ -197,13 +221,10 @@ function App() {
     return <div className="p-4 text-red-500">Error: {error.message}</div>
   }
 
+  // const [streamingResponse, setStreamingResponse] = useState<string>('');
 
 
-  const aumentarDinero = (cantidad: number) => {
-    const nuevoDinero: DineroCreate = { money: cantidad }
-    mutation.mutate(nuevoDinero)
-  }
-
+  // const [eventosAgrupados, setEventosAgrupados] = useState<[string, EventoType[]][]>([]);
 
 
 
@@ -236,7 +257,7 @@ function App() {
 
         </div>
       </div>
-      <FloatingChat messages={messages} isChatOn={isChatOn} userPrompt={userPrompt} setUserPrompt={setUserPrompt} response={response} onSendPrompt={onSendPrompt} isPending={inferMutation.isPending} />
+      <FloatingChat messages={messages} isChatOn={isChatOn} userPrompt={userPrompt} setUserPrompt={setUserPrompt} onSendPrompt={onSendPrompt} isPending={inferMutation.isPending} />
     </div>
   )
 }

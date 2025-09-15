@@ -27,12 +27,14 @@ export default abstract class LLMBaseManager {
         this.model = null
     }
 
+    abstract setContextData(data: any): Promise<void> | void
+
 
     abstract loadModel(): Promise<void> | void
 
     abstract unloadModel(): Promise<void> | void
 
-    abstract infer(prompt: string): Promise<InferenceResult>
+    abstract infer(prompt: string , temperatureUser:number, top_pUser:number): Promise<InferenceResult>
 
     abstract stream(prompt: string): AsyncIterable<string>
 
